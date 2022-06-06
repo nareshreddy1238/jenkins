@@ -4,6 +4,6 @@ pipeline {
       stage('validate') {
          echo 'validate'
      }
-   }
+  }
 }
   
