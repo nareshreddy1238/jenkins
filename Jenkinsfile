@@ -1,8 +1,10 @@
 pipeline {
   agent any
-    stages {
-      stage('validate') {
-         echo 'validate'
+  stages {
+     stage('validate') {
+        steps{
+             echo 'validate'
+        }
      }
   }
 }
