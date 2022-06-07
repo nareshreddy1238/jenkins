@@ -1,0 +1,59 @@
+currentBuild.displayName = "Calculator-#"+currentBuild.number
+pipeline {
+    agent any
+    stages {
+        stage('Git Checkout') {
+            steps {
+                echo 'Git Checkout'
+                git branch: 'main', credentialsId: 'gitpwd', url: 'https://github.com/nareshreddy1238/Javaweb.git'
+            }
+        }
+        stage('Validate') {
+            steps {
+                echo 'Validating..'
+                sh 'mvn compile'
+            }
+        }
+        stage('Test') {
+            steps {
+                echo 'Testing..'
+                sh 'mvn test'
+            }
+        }
+        stage('Package') {
+            steps {
+                echo 'Package....'
+                sh 'mvn clean package'
+            }
+        }
+       stage('Deploy') {
+           steps {
+               echo 'Deploy...'
+               sshagent(['tomcat_pwd']) {
+               sh """
+                  scp -o StrictHostKeyChecking=no target/WebAppCal-0.2.0.war  ec2-user@172.31.21.61:~/apache-tomcat-7.0.94/webapps/
+                  ssh ec2-user@172.31.21.61 /home/ec2-user/apache-tomcat-7.0.94/bin/shutdown.sh 
+                  ssh ec2-user@172.31.21.61 /home/ec2-user/apache-tomcat-7.0.94/bin/startup.sh
+                  
+                """
+       }
+     }
+    }
+       stage('Docker Image create') {
+            steps {
+               echo 'Docker Image'
+               sshagent(['docker_pwd']) {
+               sh 'docker build . -t nareshreddy1238/app:0.1'
+            }
+        }
+      }
+       stage('Docker Image Push') {
+           steps {
+               echo 'Docker Image Push'
+               withCredentials([string(credentialsId: 'DockerHub_pwd', variable: 'DockerHub_pwd')]) {
+               sh "docker login -u nareshreddy1238 -p ${DockerHub_pwd}"
+               }
+           }
+       }
+   }
+}
