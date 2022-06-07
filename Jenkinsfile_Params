@@ -1,0 +1,60 @@
+currentBuild.displayName = "Calculator-#"+currentBuild.number
+
+properties([parameters([choice(choices: ['main', 'Dev', 'Test', 'Prod'], description: 'Please select branch names', name: 'Branch'), string(defaultValue: 'centos', description: 'Please select user ', name: 'User'), string(defaultValue: 'www.intelban_01.com', description: 'Please select host name or address ', name: 'Host_ip_or_name'), string(defaultValue: '0.1', description: 'Please write docker image version ', name: 'docker_version')])])
+
+pipeline {
+    agent any
+    stages {
+        stage('Git Checkout') {
+            steps {
+                echo 'Git Checkout'
+                git branch: "${params.Branch}", credentialsId: 'gitpwd', url: 'https://github.com/nareshreddy1238/Javaweb.git'
+            }
+        }
+        stage('Validate') {
+            steps {
+                echo 'Validating..'
+                sh 'mvn compile'
+            }
+        }
+        stage('Test') {
+            steps {
+                echo 'Testing..'
+                sh 'mvn test'
+            }
+        }
+        stage('Package') {
+            steps {
+                echo 'Package....'
+                sh 'mvn clean package'
+            }
+        }
+       stage('Deploy') {
+           steps {
+               echo 'Deploy...'
+               sshagent(['tomcat_pwd']) {
+                  sh "scp -o StrictHostKeyChecking=no target/*.war ${params.User}@${Host_ip_or_name}:~/apache-tomcat-7.0.94/webapps/"
+                  sh "ssh ${params.User}@${Host_ip_or_name} /home/ec2-user/apache-tomcat-7.0.94/bin/shutdown.sh" 
+                  sh "ssh ${params.User}@${Host_ip_or_name} /home/ec2-user/apache-tomcat-7.0.94/bin/startup.sh"
+       }
+     }
+    }
+       stage('Docker Image create') {
+            steps {
+               echo 'Docker Image'
+               sshagent(['docker_pwd']) {
+               sh "docker build . -t nareshreddy1238/app:${params.docker_version}"
+            }
+        }
+      }
+       stage('Docker Image Push') {
+           steps {
+               echo 'Docker Image Push'
+               withCredentials([string(credentialsId: 'DockerHub_pwd', variable: 'DockerHub_pwd')]) {
+               sh "docker login -u nareshreddy1238 -p ${DockerHub_pwd}"
+               sh "docker push nareshreddy1238/app:${params.docker_version}"
+               }
+           }
+       }
+   }
+}
