@@ -21,6 +21,35 @@ pipeline {
                 sh 'mvn validate'
             }
         }
+        stage('Test') {
+            steps {
+                echo 'Unit Testing....'
+                sh 'mvn test'
+            }
+            post {
+                always {
+                junit '**/target/sure-reports/*.xml'
+               }
+            }  
+        }
+        stage('Code Analysis') {
+            steps {
+                echo 'SonarQube Code checking....'
+                sh 'mvn sonar:sonar -Dsonar.host.url=http://<>:9000 -Dsonar.login=<token>'
+            }
+        }
+        stage('Release') {
+            steps {
+                echo 'Artifactory store....'
+                sh 'mvn deploy'
+                }
+            post {
+                always {
+                ######## nexusArtifactUploader plugin install
+                nexusArtifactUploader credentialsId: '', groupId: 'com.web.cal', nexusUrl: '54.224.9.175:8081', nexusVersion: 'nexus2', protocol: 'http', repository: 'nexus', version: '01'
+              }
+           }
+        }  
         stage('Package') {
             steps {
                 echo 'Package....'
