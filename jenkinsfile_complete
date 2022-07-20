@@ -12,6 +12,7 @@ pipeline {
         stage('Git Checkout') {
             steps {
                 echo 'Git Checkout..'
+                ###### git:git
                 git branch: "${params.branch}", url: 'https://github.com/nareshreddy1238/Javaweb.git'
             }
         }
@@ -26,6 +27,7 @@ pipeline {
                 echo 'Unit Testing....'
                 sh 'mvn test'
             }
+            ######## Post actions
             post {
                 always {
                 junit '**/target/sure-reports/*.xml'
